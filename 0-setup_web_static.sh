@@ -2,9 +2,9 @@
 # script that sets up my web servers for the deployment of web_static
 
 # install & start NGinx
-apt update
-apt install -y nginx
-systemctl start nginx
+apt-get -y update
+apt-get install -y nginx
+service nginx start
 
 # create folders if they don't exist
 mkdir /data/web_static/releases/test/
@@ -20,15 +20,15 @@ if [ -L "$dest_folder" ]; then
     rm "$dest_folder"
 fi
 # creates new symbolic link
-sudo ln -s "$src_folder" "$dest_folder"
+ln -sf "$src_folder" "$dest_folder"
 
 # giving ownership of /data/ folder to user/group "ubuntu"
-sudo chown -R ubuntu:ubuntu /data
+chown -R ubuntu:ubuntu /data/
 
 # update Nginx conf file to serve content of /data/web_static/current/ to hbnb_static
 nginx_conf="/etc/nginx/sites-available/default"
 # configure location block in the server context > Mginx.conf file
-sudo tee -a "$nginx_conf" > /dev/null <<EOL
+tee -a "$nginx_conf" > /dev/null <<EOL
 server {
     listen 80;
     server_name eljones.tech;
@@ -41,7 +41,7 @@ server {
 EOL
 
 # restart Nginx to apply conf changes
-sudo systemctl restart nginx
+service nginx restart
 
 # ensure my script/program always exits successfully
 exit 0
