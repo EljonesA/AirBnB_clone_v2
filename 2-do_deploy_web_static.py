@@ -14,6 +14,7 @@ def do_deploy(archive_path):
     """
     Distributes an archive to web servers and create new sym link
     """
+    # check if archive exists
     if not os.path.exists(archive_path):
         return False
     try:
