@@ -9,7 +9,6 @@ service nginx start
 # create folders if they don't exist
 mkdir /data/web_static/releases/test/
 mkdir /data/web_static/shared/
-touch /data/web_static/releases/test/index.html
 echo "Hi Eljones👋, Am served from Nginx" > /data/web_static/releases/test/index.html
 
 # create symbolic link btwn /data/web_static/current & /data/web_static/releases/test/
@@ -26,19 +25,9 @@ ln -sf "$src_folder" "$dest_folder"
 chown -R ubuntu:ubuntu /data/
 
 # update Nginx conf file to serve content of /data/web_static/current/ to hbnb_static
-nginx_conf="/etc/nginx/sites-available/default"
-# configure location block in the server context > Mginx.conf file
-tee -a "$nginx_conf" > /dev/null <<EOL
-server {
-    listen 80;
-    server_name eljones.tech;
-
-    location /hbnb_static {
-        alias /data/web_static/current; # alias specifies dir from which to serve requests to /hbnb_statuc
-        index index.html; # default files to serve
-    }
-}
-EOL
+location_block="location /hbnb_static/ {\n\talias /data/web_static/current/;\n\tautoindex off;\n}\n"
+# Add the location block to the NGinx configuration file
+sed -i "/^\s*server\s*{/a $location_block" /etc/nginx/sites-available/default
 
 # restart Nginx to apply conf changes
 service nginx restart

@@ -1,77 +1,75 @@
 #!/usr/bin/python3
-""" Fabric script that creates and distributes an archive to web servers """
-from fabric import task
+"""
+Fabric script that creates and distributes an archive to your web servers
+"""
+from fabric.api import local, put, run, env
+from os.path import exists
 from datetime import datetime
-from os import path
+
 
 # hostname / IP of the servers
 env.hosts = ['34.232.53.204', '54.145.155.223']
 env.user = "ubuntu"
 
 
-@task
-def do_pack(c):
+def do_pack():
     """
-    Create a .tgz archive from the contents of the web_static folder
+    Create a compressed archive of web_static folder
     """
     try:
-        # create archive path/name with date and time for versions
-        now = datetime.now()
-        time_format = now.strftime("%Y%m%d%H%M%S")
-        archive_path = "versions/web_static_{}.tgz".format(time_format)
-
-        # create new dir if it doesn't already exist
-        if not path.exists("versions"):
-            c.local("mkdir -p versions")
-
-        # create .tgz archive using tar command
-        c.local("tar -czvf {} web_static".format(archive_path))
-
-        # check if archive correctly generated
-        if path.exists(archive_path):
-            return archive_path
-    except Exception as e:
+        # Create folder if it doesn't exist
+        local("mkdir -p versions")
+        # Create archive file name with current date and time
+        time_format = datetime.now().strftime("%Y%m%d%H%M%S")
+        file_name = "versions/web_static_{}.tgz".format(time_format)
+        # Create the archive
+        local("tar -cvzf {} web_static".format(file_name))
+        return file_name
+    except:
         return None
 
 
-@task
-def do_deploy(c):
+def do_deploy(archive_path):
     """
-    Distribute the archive to web servers and create new symbolic link
+    Distribute archive to web servers and create symbolic link
     """
-    archive_path = do_pack(c)
-    if not archive_path:
+    if not exists(archive_path):
         return False
 
     try:
-        # upload archive to server /tmp
-        c.put(local_path=archive_path, remote="/tmp")
-
-        # Uncompress the archive to the folder
-        archive_filename = path.basename(archive_path)
-        archive_filename_no_ext = path.splitext(archive_filename)[0]
-        archive_dest_folder = f'/data/web_static/releases/{archive_filename_no_ext}'
-        c.run(f"mkdir -p {archive_dest_folder}")
-        c.run(f"tar -xzf /tmp/{archive_filename} -C {archive_dest_folder}")
-
-        # delete archive from server
-        c.run(f"rm /tmp/{archive_filename}")
-
-        # delete symbolic link
-        sym_link = "/data/web_static/current"
-        c.run(f"rm -rf {sym_link}")
-
-        # Create a new the symbolic link /data/web_static/current on the web server
-        c.run(f"sudo ln -s {archive_dest_folder} /data/web_static/current")
-
+        # Upload archive to /tmp/ directory
+        put(archive_path, "/tmp/")
+        # Extract archive to /data/web_static/releases/
+        archive_name = archive_path.split('/')[-1]
+        archive_name_no_ext = archive_name.split('.')[0]
+        run("mkdir -p /data/web_static/releases/{}/".format(archive_name_no_ext))
+        run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/"
+            .format(archive_name, archive_name_no_ext))
+        # Delete uploaded archive
+        run("rm /tmp/{}".format(archive_name))
+        # Move contents of extracted folder to its parent directory
+        run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/"
+            .format(archive_name_no_ext, archive_name_no_ext))
+        # Remove empty folder
+        run("rm -rf /data/web_static/releases/{}/web_static".format(archive_name_no_ext))
+        # Delete old symbolic link if exists
+        run("rm -rf /data/web_static/current")
+        # Create new symbolic link
+        run("ln -s /data/web_static/releases/{}/ /data/web_static/current"
+            .format(archive_name_no_ext))
+        print("New version deployed!")
         return True
-    except Exception as e:
+    except:
         return False
 
 
-@task
-def deploy(c):
+def deploy():
     """
-    Deploy the web static content to web servers
+    Deploy the web static content
     """
-    return do_deploy(c)
+    # Create the archive
+    archive_path = do_pack()
+    if archive_path is None:
+        return False
+    # Deploy the archive
+    return do_deploy(archive_path)
