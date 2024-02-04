@@ -9,15 +9,11 @@ service nginx start
 # create folders if they don't exist
 mkdir /data/web_static/releases/test/
 mkdir /data/web_static/shared/
-echo "Hi Eljones👋, Am served from Nginx" > /data/web_static/releases/test/index.html
+echo "Holberton School" > /data/web_static/releases/test/index.html
 
 # create symbolic link btwn /data/web_static/current & /data/web_static/releases/test/
 src_folder="/data/web_static/releases/test/"
 dest_folder="/data/web_static/current"
-# check if symbolic already exists & delete it
-if [ -L "$dest_folder" ]; then
-    rm "$dest_folder"
-fi
 # creates new symbolic link
 ln -sf "$src_folder" "$dest_folder"
 

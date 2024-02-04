@@ -3,8 +3,8 @@
 Fabric script that creates and distributes an archive to your web servers
 """
 from fabric.api import local, put, run, env
-from os.path import exists
 from datetime import datetime
+import os
 
 
 # hostname / IP of the servers
@@ -14,49 +14,67 @@ env.user = "ubuntu"
 
 def do_pack():
     """
-    Create a compressed archive of web_static folder
+    create .tgz archive using tar command
     """
     try:
-        # Create folder if it doesn't exist
-        local("mkdir -p versions")
-        # Create archive file name with current date and time
-        time_format = datetime.now().strftime("%Y%m%d%H%M%S")
-        file_name = "versions/web_static_{}.tgz".format(time_format)
-        # Create the archive
-        local("tar -cvzf {} web_static".format(file_name))
-        return file_name
+        # create archive path/name with date and time for versions
+        now = datetime.now()
+        time_format = now.strftime("%Y%m%d%H%M%S")
+        archive_path = "versions/web_static_{}.tgz".format(time_format)
+
+        # create new dir if it doesn't already exist
+        if not os.path.exists("versions"):
+            local("mkdir versions")
+
+        # create .tgz archive using tar command
+        local("tar -czvf {} web_static".format(archive_path))
+        # check if archive correctly generated
+        if os.path.exists(archive_path):
+            return archive_path
     except:
         return None
 
 
 def do_deploy(archive_path):
     """
-    Distribute archive to web servers and create symbolic link
+    Distributes an archive to web servers and create new sym link
     """
-    if not exists(archive_path):
+    # check if archive exists
+    if not os.path.exists(archive_path):
         return False
-
     try:
-        # Upload archive to /tmp/ directory
-        put(archive_path, "/tmp/")
-        # Extract archive to /data/web_static/releases/
-        archive_name = archive_path.split('/')[-1]
-        archive_name_no_ext = archive_name.split('.')[0]
-        run("mkdir -p /data/web_static/releases/{}/".format(archive_name_no_ext))
-        run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/"
-            .format(archive_name, archive_name_no_ext))
-        # Delete uploaded archive
-        run("rm /tmp/{}".format(archive_name))
-        # Move contents of extracted folder to its parent directory
-        run("mv /data/web_static/releases/{}/web_static/* /data/web_static/releases/{}/"
-            .format(archive_name_no_ext, archive_name_no_ext))
-        # Remove empty folder
-        run("rm -rf /data/web_static/releases/{}/web_static".format(archive_name_no_ext))
-        # Delete old symbolic link if exists
+        # Extract the archive filename without extension
+        path = archive_path.split('/')[-1]
+        path_no_ext = path.strip('.tgz')
+
+        # Define the destination path for the release
+        releases_path = "/data/web_static/releases/{}/".format(path_no_ext_)
+
+        # upload archive to server /tmp
+        put(archive_path, "/tmp")
+
+        # Create the directory for the release
+        run("mkdir -p {}".format(releases_path))
+
+
+         # Extract the archive to the release directory
+        run("tar -xzf {} -C {}".format(path, releases_path))
+
+        # Remove the temporary archive
+        run("rm {}".format(path))
+
+        # Move the contents of the extracted folder to the release directory
+        run("mv {}web_static/* {}".format(releases_path, releases_path))
+
+        # Remove the extracted folder
+        run("rm -rf {}web_static".format(releases_path))
+
+        # Remove the current symbolic link
         run("rm -rf /data/web_static/current")
-        # Create new symbolic link
-        run("ln -s /data/web_static/releases/{}/ /data/web_static/current"
-            .format(archive_name_no_ext))
+
+        # Create a new symbolic link pointing to the new release
+        run("ln -s {} /data/web_static/current".format(releases_path))
+
         print("New version deployed!")
         return True
     except:
@@ -65,7 +83,7 @@ def do_deploy(archive_path):
 
 def deploy():
     """
-    Deploy the web static content
+    Deploy the web static content using do_pack & do_deploy functions
     """
     # Create the archive
     archive_path = do_pack()

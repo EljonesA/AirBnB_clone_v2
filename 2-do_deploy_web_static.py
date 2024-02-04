@@ -2,7 +2,6 @@
 """ Fabric script that distributes an archive to your web servers """
 from fabric.api import *
 from datetime import datetime
-import os
 
 
 # hostname / IP of the servers
@@ -18,19 +17,12 @@ def do_deploy(archive_path):
     if not os.path.exists(archive_path):
         return False
     try:
-        # Extract the archive filename
-        name = archive_path.replace('/', ' ')
-        name = shlex.split(name)
-        name = name[-1]
-
         # Extract the archive filename without extension
-        wname = name.replace('.', ' ')
-        wname = shlex.split(wname)
-        wname = wname[0]
+        path = archive_path.split('/')[-1]
+        path_no_ext = path.strip('.tgz')
 
         # Define the destination path for the release
-        releases_path = "/data/web_static/releases/{}/".format(wname)
-        tmp_path = "/tmp/{}".format(name)
+        releases_path = "/data/web_static/releases/{}/".format(path_no_ext_)
 
         # upload archive to server /tmp
         put(archive_path, "/tmp")
@@ -40,10 +32,10 @@ def do_deploy(archive_path):
 
 
          # Extract the archive to the release directory
-        run("tar -xzf {} -C {}".format(tmp_path, releases_path))
+        run("tar -xzf {} -C {}".format(path, releases_path))
 
         # Remove the temporary archive
-        run("rm {}".format(tmp_path))
+        run("rm {}".format(path))
 
         # Move the contents of the extracted folder to the release directory
         run("mv {}web_static/* {}".format(releases_path, releases_path))
@@ -59,5 +51,5 @@ def do_deploy(archive_path):
 
         print("New version deployed!")
         return True
-    except Exception as e:
+    except:
         return False
