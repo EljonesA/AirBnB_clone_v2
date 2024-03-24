@@ -31,7 +31,7 @@ def python_is_cool(text=None):
     ''' Provides default value "cool" for text variable if none provided '''
     # set default text variable value
     if text is None:
-        text = 'cool'
+        text = 'is cool'
     text = text.replace('_', ' ')
     return f"Python {text}"
 
