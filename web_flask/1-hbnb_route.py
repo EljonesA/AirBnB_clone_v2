@@ -12,8 +12,8 @@ def hello():
     return "Hello HBNB!"
 
 
-@app.route('/<hbnb>', strict_slashes=False)
-def sub_route(hbnb):
+@app.route('/hbnb', strict_slashes=False)
+def sub_route():
     ''' This performs routing to /hbnb '''
     return "HBNB"
 
